@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,12 +27,15 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddSingleton<WeatherForecastService>();
 
-builder.Services.AddAuthorization(options =>
+builder.Services.AddAuthorizationCore(options =>
 {
     options.DefaultPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
 });
+
+//builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDataProtection()
@@ -58,23 +63,27 @@ builder.Services.AddAuthentication(options =>
     options.ResponseType = OpenIdConnectResponseType.Code;
     options.ResponseMode = OpenIdConnectResponseMode.Query;
     options.SaveTokens = true;
-    options.GetClaimsFromUserInfoEndpoint = true;
+    //options.GetClaimsFromUserInfoEndpoint = true;
+    //options.MetadataAddress = "https://localhost:7098/.well-known/openid-configuration";
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = false,
+        ValidateIssuer = true,
         ValidateAudience = true,
+        ValidateIssuerSigningKey = true,
+        //IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("907A6D3546002CE8744DC03DC455A556")),
         ClockSkew = TimeSpan.Zero,
         RoleClaimType = "groups",
         NameClaimType = "name",
         ValidIssuer = "https://localhost:7098/",
-        ValidAudience = "clientone"
+        ValidAudience = "api1"
     };
     options.Scope.Add(OpenIdConnectScope.Email);
     options.Scope.Add(OpenIdConnectScope.OpenIdProfile);
     options.Scope.Add("api1");
     options.MapInboundClaims = false;
     options.UsePkce = true;
-
+    options.GetClaimsFromUserInfoEndpoint = true;
+    options.SaveTokens = true;
     options.SignedOutCallbackPath = new PathString("/authentication/logout-callback");
     options.CallbackPath = new PathString("/authentication/login-callback");
     //options.SignedOutCallbackPath = new PathString("/authentication/login-callback");
