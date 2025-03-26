@@ -1,0 +1,36 @@
+﻿@page "/"
+
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAntiforgery Xsrf
+@inject ILogger<Index> Logger
+
+<PageTitle>Index</PageTitle>
+
+<h1>Hello, world! </h1>
+
+<button @onclick="GetTokens">Get tokens</button> 
+
+@code {
+    private async Task GetTokens()
+    {
+        var context = HttpContextAccessor.HttpContext!;
+
+        var accessToken = await context.GetTokenAsync("access_token");
+        var identityToken = await context.GetTokenAsync("id_token");
+        var refreshToken = await context.GetTokenAsync("refresh_token");
+        var antiforgeryToken = Xsrf.GetAndStoreTokens(context).RequestToken;
+        var expiresAt = await context.GetTokenAsync("expires_at");
+
+        Logger.LogDebug("AccessToken: {Token}", accessToken);
+        Logger.LogDebug("IdentityToken: {Token}", identityToken);
+        Logger.LogDebug("RefreshToken: {Token}", refreshToken);
+        Logger.LogDebug("Expires at: {Token}", expiresAt);
+    }
+}
