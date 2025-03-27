@@ -1,14 +1,9 @@
 using BlazorOidc;
 using BlazorOidc.Data;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -67,13 +62,14 @@ builder.Services.AddAuthentication(options =>
     //options.MetadataAddress = "https://localhost:7098/.well-known/openid-configuration";
     options.TokenValidationParameters = new TokenValidationParameters
     {
+        ValidateLifetime = true,
         ValidateIssuer = true,
-        ValidateAudience = true,
+        ValidateAudience = false,
         ValidateIssuerSigningKey = true,
-        //IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("907A6D3546002CE8744DC03DC455A556")),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("907A6D3546002CE8744DC03DC455A556")),
         ClockSkew = TimeSpan.Zero,
-        RoleClaimType = "groups",
-        NameClaimType = "name",
+        //RoleClaimType = "groups",
+        //NameClaimType = "name",
         ValidIssuer = "https://localhost:7098/",
         ValidAudience = "api1"
     };

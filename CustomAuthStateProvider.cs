@@ -2,8 +2,8 @@
 
 using Microsoft.AspNetCore.Components.Authorization;
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 
 public class CustomAuthStateProvider : AuthenticationStateProvider
 {
