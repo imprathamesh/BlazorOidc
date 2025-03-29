@@ -10,13 +10,24 @@
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IAntiforgery Xsrf
 @inject ILogger<Index> Logger
-
+@inject IHttpContextAccessor _accessor
 <PageTitle>Index</PageTitle>
 
 <h1>Hello, world! </h1>
 
-<button @onclick="GetTokens">Get tokens</button> 
-
+<button @onclick="GetTokens">Get tokens</button>
+@foreach (var item in _accessor.HttpContext.User.Claims)
+{
+    @item.Value
+    <br />
+    <br />
+}
+<AuthorizeView>
+    <Authorized>
+        @context.User.GetType().Name
+        @context.User.Identity.IsAuthenticated
+    </Authorized>
+</AuthorizeView>
 @code {
     private async Task GetTokens()
     {

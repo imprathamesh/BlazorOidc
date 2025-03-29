@@ -55,9 +55,11 @@ builder.Services.AddAuthentication(options =>
     options.ClientId = "clientone";
     options.ClientSecret = "your-secret";
     options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    options.ResponseType = OpenIdConnectResponseType.Code;
+    options.ResponseType = OpenIdConnectResponseType.CodeIdToken;
     options.ResponseMode = OpenIdConnectResponseMode.Query;
     options.SaveTokens = true;
+
+    options.ProtocolValidator.RequireNonce = false;
     //options.GetClaimsFromUserInfoEndpoint = true;
     //options.MetadataAddress = "https://localhost:7098/.well-known/openid-configuration";
     options.TokenValidationParameters = new TokenValidationParameters
@@ -66,7 +68,7 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuer = true,
         ValidateAudience = false,
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("907A6D3546002CE8744DC03DC455A556")),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("YourSuperLongSecureSecretKeyHere")),
         ClockSkew = TimeSpan.Zero,
         //RoleClaimType = "groups",
         //NameClaimType = "name",
@@ -77,7 +79,7 @@ builder.Services.AddAuthentication(options =>
     options.Scope.Add(OpenIdConnectScope.OpenIdProfile);
     options.Scope.Add("api1");
     options.MapInboundClaims = false;
-    options.UsePkce = true;
+    options.UsePkce = false;
     options.GetClaimsFromUserInfoEndpoint = true;
     options.SaveTokens = true;
     options.SignedOutCallbackPath = new PathString("/authentication/logout-callback");
