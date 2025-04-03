@@ -1,11 +1,13 @@
 using BlazorOidc;
 using BlazorOidc.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.JSInterop;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +39,14 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(@"C:\keys"))
     .SetApplicationName("BlazorOidc");
 
+builder.Services.AddTransient<AuthorizationHandler>();
+builder.Services.AddHttpClient("ApiClient", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7067/");
+}).AddHttpMessageHandler<AuthorizationHandler>();
+
+builder.Services.AddScoped(sp => sp.GetService<IHttpClientFactory>().CreateClient("ApiClient"));
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -51,7 +61,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
 {
-    options.Authority = "https://localhost:7098/";
+    options.Authority = "https://localhost:7098";
     options.ClientId = "clientone";
     options.ClientSecret = "your-secret";
     options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -72,8 +82,8 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero,
         //RoleClaimType = "groups",
         //NameClaimType = "name",
-        ValidIssuer = "https://localhost:7098/",
-        ValidAudience = "api1"
+        ValidIssuer = "https://localhost:7098",
+        ValidAudience = "https://localhost:7098/resources"
     };
     options.Scope.Add(OpenIdConnectScope.Email);
     options.Scope.Add(OpenIdConnectScope.OpenIdProfile);
@@ -86,6 +96,43 @@ builder.Services.AddAuthentication(options =>
     options.CallbackPath = new PathString("/authentication/login-callback");
     //options.SignedOutCallbackPath = new PathString("/authentication/login-callback");
     //options.RemoteSignOutPath = new PathString("/signout-oidc");
+
+    options.Events = new OpenIdConnectEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var accessToken = context.TokenEndpointResponse.AccessToken;
+            var refreshToken = context.TokenEndpointResponse.RefreshToken;
+
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddMinutes(60) // Expire with token
+            };
+
+            context.HttpContext.Response.Cookies.Append("access_token", accessToken, cookieOptions);
+            context.HttpContext.Response.Cookies.Append("refresh_token", refreshToken, cookieOptions);
+        }
+    };
+}).AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    options.Authority = "https://localhost:7098";
+    options.RequireHttpsMetadata = false;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        SaveSigninToken = true,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+
+        ValidIssuer = "https://localhost:7098",
+        ValidAudience = "https://localhost:7098/resources",
+
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("YourSuperLongSecureSecretKeyHere"))
+    };
 });
 
 builder.Services.AddSingleton<OidcCookieRefresher>();
@@ -94,7 +141,7 @@ builder.Services.AddOptions<CookieAuthenticationOptions>(CookieAuthenticationDef
     {
         options.Events.OnValidatePrincipal = context => refresher.ValidateOrRefreshCookieAsync(context);
     });
-
+builder.Services.AddControllers();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -115,6 +162,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 
+app.MapControllers();
 //ENDPOINTS
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
